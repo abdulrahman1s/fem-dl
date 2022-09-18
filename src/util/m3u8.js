@@ -18,13 +18,6 @@ export class M3u8 {
         return this
     }
 
-    formatChunks(fn) {
-        for (let i = 0; i < this.content.length; i++) {
-            if (this.content[i].startsWith('index_')) this.content[i] = fn(this.content[i])
-        }
-        return this
-    }
-
     toString() {
         return this.content.join('\n')
     }

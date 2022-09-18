@@ -153,8 +153,7 @@ for (let i = 0; i < lessons.length; i++) {
         captions = INCLUDE_CAPTION ? await get(`${FEM_CAPTIONS_ENDPOINT}/assets/courses/${course.datePublished}-${course.slug}/${episode.index}-${episode.slug}.${CAPTION_EXT}`) : null
 
     m3u8
-        .setDecryptionKey('file://' + decryptionKeyPath)
-        .formatChunks((chunk) => 'file://' + join(tempDir, chunk))
+        .setDecryptionKey(decryptionKeyPath)
 
     await Promise.all([
         fs.writeFile(decryptionKeyPath, key),
