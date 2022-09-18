@@ -1,0 +1,21 @@
+{
+  "name": "fem-dl",
+  "version": "0.0.1",
+  "description": "Frontend Masters Downloader",
+  "private": true,
+  "scripts": {
+    "start": "node --no-warnings --experimental-specifier-resolution=node src/index.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "ffmpeg-static": "^5.1.0",
+    "kleur": "^4.1.5",
+    "node-fetch": "^3.2.10",
+    "ora": "^6.1.2",
+    "prompts": "^2.4.2",
+    "puppeteer": "^17.1.3"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
