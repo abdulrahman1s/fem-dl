@@ -63,8 +63,6 @@ console.clear()
 const spinner = ora().start('Launching chrome engine...')
 const browser = await puppeteer.launch({
     headless: true,
-    executablePath: "/opt/brave.com/brave/brave",
-    userDataDir: "/home/abdulrahman/.config/BraveSoftware/Brave-Browser/Default",
     args: ["--fast-start", "--disable-extensions", "--no-sandbox"],
 })
 
