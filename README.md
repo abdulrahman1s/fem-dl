@@ -13,6 +13,7 @@
 ### Requirements
 - Nodejs v16 or newer installed
 - Git Installed
+- FrontendMasters account
 
 ### Usage
 1. Clone the repo 
