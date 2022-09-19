@@ -114,22 +114,27 @@ for (const data of Object.values(course.lessonData)) lessons[lessons.findIndex(x
 
 let j = 0;
 
+// \ / : * ? " < > | are not allowed in windows file name
+const safePath = title => title.replace(/[\/\\:*?"<>|]/g, '')
+
 
 for (let i = 0; i < lessons.length; i++) {
     const episode = lessons[i]
 
     if (typeof episode === 'string') {
         j = i
-        await ensureDir(join(course.title, lessons[j]))
+        await ensureDir(join(safePath(course.title), safePath(lessons[j])))
         continue
     }
 
-
     const
         lessonName = lessons[j],
-        fileName = `${episode.index + 1}. ${episode.title}.${EXTENSION}`,
-        path = join(DOWNLOAD_DIR, course.title, lessonName),
-        tempDir = join(path, '.tmp', episode.title),
+        safeLessonName = safePath(lessonName),
+        safeCourseTitle = safePath(course.title),
+        safeEpisodeTitle = safePath(episode.title),
+        fileName = `${episode.index + 1}. ${safeEpisodeTitle}.${EXTENSION}`,
+        path = join(DOWNLOAD_DIR, safeCourseTitle, safeLessonName),
+        tempDir = join(path, '.tmp', safeEpisodeTitle),
         filePath = join(tempDir, fileName),
         decryptionKeyPath = join(tempDir, 'key.bin'),
         captionPath = join(tempDir, `caption.${CAPTION_EXT}`),
