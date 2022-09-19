@@ -1,5 +1,8 @@
 import fs from 'node:fs/promises'
 import fetch from 'node-fetch'
+import os from 'node:os'
+import { join } from 'node:path'
+
 
 export function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 Bytes'
@@ -25,15 +28,22 @@ export async function ensureDir(path) {
 }
 
 export async function ensureEmpty(path) {
-    await fs.rm(path, { force: true, recursive: true }).catch(() => null)   
-    await fs.mkdir(path, { recursive: true })    
+    await fs.rm(path, { force: true, recursive: true }).catch(() => null)
+    await fs.mkdir(path, { recursive: true })
 }
 
 export function get(url) {
-    return fetch(url).then(res => {
+    return fetch(url).then((res) => {
         if (!res.ok) throw res
         return res.arrayBuffer()
     }).then(Buffer.from)
 }
+
+
+export function safeJoin(...path) {
+    path[path.length - 1] = os.platform() === 'win32' ? path[path.length - 1].replace(/[\/\\:*?"<>|]/g, '') : path[path.length - 1]
+    return join(...path)
+}
+
 
 export { setTimeout as sleep } from 'node:timers/promises'

@@ -1,5 +1,5 @@
 
-export class M3u8 {
+export default class M3u8 {
     constructor(content) {
         content  = content.toString()
         
@@ -7,9 +7,7 @@ export class M3u8 {
         this.decryptionKey = content.match(/URI="(.+)"/)[1]
         this.content = content.split('\n')
 
-        for (const line of this.content) {
-            if (!line.startsWith('#')) this.totalChunks++
-        }
+        for (const line of this.content) if (line.startsWith('index_')) this.totalChunks++
     }
 
     setDecryptionKey(key) {

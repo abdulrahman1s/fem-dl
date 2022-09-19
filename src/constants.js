@@ -1,7 +1,9 @@
 const FEM_BASE = 'frontendmasters.com'
 
+export const FEM_ENDPOINT = `https://${FEM_BASE}`
 export const FEM_API_ENDPOINT = `https://api.${FEM_BASE}/v1`
 export const FEM_CAPTIONS_ENDPOINT = `https://captions.${FEM_BASE}`
+
 export const PLAYLIST_EXT = 'm3u8'
 export const CAPTION_EXT = 'vtt'
 export const QUALITY_FORMAT = {
@@ -12,7 +14,9 @@ export const QUALITY_FORMAT = {
     360: 'index_360_Q8_2mbps'
 }
 
+export const FEM_COURSE_REG = /(:?https?:\/\/)?frontendmasters\.com\/courses\/([^/]+)/
+
 export const SUPPORTED_FORMATS = [
     'mp4',
-    // 'mkv'
+    'mkv'
 ]

@@ -1,8 +1,0 @@
-[
-    {
-        "name": "wordpress_logged_in_*other-random-id*",
-        "value": "super-long-secret-value",
-        "domain": ".frontendmasters.com",
-        "httpOnly": true
-    }
-]

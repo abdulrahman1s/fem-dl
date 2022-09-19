@@ -12,25 +12,17 @@
 
 ### Requirements
 - Nodejs v16 or newer installed
-- Git Installed
-- FrontendMasters account
+- Valid FrontendMasters account cookies ([Guide](https://developer.chrome.com/docs/devtools/storage/cookies/))
 
 ### Usage
-1. Clone the repo 
-```sh
-$ git clone https://github.com/abdulrahman1s/fem-dl.git
-$ cd fem-dl
+```s
+$ npx fem-dl
 ```
 
-2. Rename [`cookies.example.json`](./cookies.example.json) to `cookies.json`
-
-3. Copy the saved cookies at **frontendmasters.com** to `cookies.json` ([Guide](https://developer.chrome.com/docs/devtools/storage/cookies/))
-
-4. Run!
-```sh
-$ npm install && npm start
+or via pnpm
+```s
+$ pnpm dlx fem-dl
 ```
-
 
 ### Disclaimer
 I am not responsible for any use of this program, please read [FrontendMasters terms of service](https://static.frontendmasters.com/assets/legal/MasterServicesAgreement.pdf) before using this.

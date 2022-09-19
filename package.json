@@ -1,10 +1,13 @@
 {
   "name": "fem-dl",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Frontend Masters Downloader",
-  "private": true,
+  "main": "src/index.js",
   "scripts": {
-    "start": "node --no-warnings --experimental-specifier-resolution=node src/index.js"
+    "start": "node src/index.js"
+  },
+  "bin": {
+    "fem-dl": "src/index.js"
   },
   "type": "module",
   "dependencies": {
@@ -17,5 +20,24 @@
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "homepage": "https://github.com/abdulrahman1s/fem-dl#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abdulrahman1s/fem-dl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abdulrahman1s/fem-dl/issues"
+  },
+  "license": "UNLICENSE",
+  "files": [
+    "src/*"
+  ],
+  "keywords": [
+    "frontendmasters",
+    "fem",
+    "downloader",
+    "cli",
+    "courses"
+  ]
 }
