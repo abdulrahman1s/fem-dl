@@ -125,7 +125,7 @@ for (let i = 0; i < lessons.length; i++) {
     }
 
     // \ / : * ? " < > | are not allowed in windows file name
-    const safePath = title => title.replace(/[\\/:*?"<>|]/g, '')
+    const safePath = title => title.replace(/[\/\\:*?"<>|]/g, '')
 
     const
         lessonName = lessons[j],
