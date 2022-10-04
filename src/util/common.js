@@ -1,5 +1,6 @@
 import defaultFetch from 'node-fetch'
 import extendFetchCookie from 'fetch-cookie'
+import extendFetchRetry from 'fetch-retry'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import { join } from 'node:path'
@@ -38,10 +39,9 @@ export function extendedFetch(options) {
 	let actualFetch = defaultFetch
 
 	actualFetch = extendFetchCookie(actualFetch)
+	actualFetch = extendFetchRetry(actualFetch)
 
-	// actualFetch = extendFetchRetry(actualFetch)
-
-	const fetch = (url, returnType) => actualFetch(url, options).then(async (res) => {
+	const fetch = (url, returnType) => actualFetch(url, options).then((res) => {
 		if (!res.ok) throw res
 		if (returnType === 'json') return res.json()
 		if (returnType === 'text') return res.text()

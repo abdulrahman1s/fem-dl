@@ -8,6 +8,7 @@
 - Option to include subtitles/captions to the episodes
 - Support multiple video quality
 - Support multiple video formats (currently: mp4 and mkv)
+- Retry on fail (useful for slow/bad internet connection)
 
 
 ### Requirements

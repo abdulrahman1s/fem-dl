@@ -69,15 +69,13 @@ console.clear()
 
 const fetch = extendedFetch({
 	headers: {
-		'Accept': '*/*',
 		'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36',
 		'Cookie': `wordpress_logged_in_323a64690667409e18476e5932ed231e=${TOKEN}`,
 		'Origin': 'https://frontendmasters.com',
 		'Referer': 'https://frontendmasters.com/',
-		'pragma': 'no-cache',
-		'cache-control': 'no-cache'
 	},
-	credentials: 'include'
+	retries: 5,
+	retryDelay: 1000
 })
 
 const spinner = ora(`Searching for ${COURSE_SLUG}...`).start()

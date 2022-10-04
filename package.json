@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "fetch-cookie": "^2.1.0",
+    "fetch-retry": "^5.0.3",
     "ffmpeg-static": "^5.1.0",
     "kleur": "^4.1.5",
     "node-fetch": "^3.2.10",
