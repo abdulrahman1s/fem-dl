@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 console.clear()
 
 import { FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS } from './constants.js'
