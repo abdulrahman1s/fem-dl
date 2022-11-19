@@ -34,7 +34,7 @@ const {
     type: 'text',
     name: 'COURSE_SLUG',
     message: 'The url of the course you want to download',
-    initial: 'https://frontendmasters.com/courses/...',
+    initial: env['FEM_DL_COURSE_URL'] || 'https://frontendmasters.com/courses/...',
     validate: v => !v.endsWith('...') && FEM_COURSE_REG.test(v),
     format: v => v.match(FEM_COURSE_REG)[2],
     onState: exitOnCancel
@@ -43,6 +43,7 @@ const {
     name: 'TOKEN',
     message: 'Paste the value of "wordpress_logged_in_xxx" cookie (visit: frontendmasters.com)',
     format: v => decodeURIComponent(v) === v ? encodeURIComponent(v) : v,
+    initial: env['FEM_DL_COOKIES'],
     onState: exitOnCancel
 }, {
     type: 'select',
@@ -68,7 +69,7 @@ const {
     type: 'text',
     message: 'Download directory path',
     name: 'DOWNLOAD_DIR',
-    initial: safeJoin(os.homedir(), 'Downloads'),
+    initial: env['FEM_DL_DOWNLOAD_PATH'] || safeJoin(os.homedir(), 'Downloads'),
     validate: v => isPathExists(v),
     onState: exitOnCancel
 }])
