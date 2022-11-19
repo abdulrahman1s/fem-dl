@@ -18,7 +18,7 @@ const exitOnCancel = (state) => {
 
 const {
     COURSE_SLUG,
-    PREFERED_QUALITY,
+    PREFERRED_QUALITY,
     DOWNLOAD_DIR,
     EXTENSION,
     INCLUDE_CAPTION,
@@ -39,7 +39,7 @@ const {
     onState: exitOnCancel
 }, {
     type: 'select',
-    name: 'PREFERED_QUALITY',
+    name: 'PREFERRED_QUALITY',
     message: 'Which stream quality do you prefer?',
     choices: [2160, 1440, 1080, 720, 360].map((value) => ({ title: value + 'p', value })),
     format: v => QUALITY_FORMAT[v],
@@ -103,7 +103,7 @@ const [lessons, totalEpisodes] = course.lessonElements.reduce((acc, cur) => {
 }, [{}, 0, ''])
 
 
-let i = 1, x = totalEpisodes, QUALITY = PREFERED_QUALITY
+let i = 1, x = totalEpisodes, QUALITY = PREFERRED_QUALITY
 
 const coursePath = safeJoin(DOWNLOAD_DIR, course.title)
 
@@ -144,12 +144,12 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
 
             if (typeof QUALITY === 'undefined') {
                 console.warn(`This shouldn't happen, please fill an issue`)
-                console.warn(`Selected Quality: ${PREFERED_QUALITY}\nCourse: ${COURSE_SLUG}\nm3u8: ${availableQualities}`)
+                console.warn(`Selected Quality: ${PREFERRED_QUALITY}\nCourse: ${COURSE_SLUG}\nm3u8: ${availableQualities}`)
                 process.exit()
             }
         }
 
-        if (QUALITY !== PREFERED_QUALITY) {
+        if (QUALITY !== PREFERRED_QUALITY) {
             const [formattedQuality] = Object.entries(QUALITY_FORMAT).find(([_, value]) => value === QUALITY)
             spinner.text = `The preferred quality was not found, downgraded to ${formattedQuality}p`
         }
