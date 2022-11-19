@@ -35,10 +35,10 @@ export async function ensureEmpty(path) {
 	await fs.mkdir(path, { recursive: true })
 }
 
-export function extendedFetch(options) {
+export function extendedFetch(options, cookies) {
 	let actualFetch = defaultFetch
 
-	actualFetch = extendFetchCookie(actualFetch)
+	actualFetch = extendFetchCookie(actualFetch, cookies)
 	actualFetch = extendFetchRetry(actualFetch)
 
 	const fetch = (url, returnType) => actualFetch(url, options).then((res) => {

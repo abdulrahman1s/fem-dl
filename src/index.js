@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 
-console.clear()
-
-import { FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS } from './constants.js'
-import { sleep, isPathExists, ensureDir, extendedFetch, safeJoin } from './util/common.js'
+import { FEM_ENDPOINT, FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS } from './constants.js'
+import { sleep, isPathExists, ensureDir, extendedFetch, safeJoin, formatBytes } from './util/common.js'
 import ffmpeg from './util/ffmpeg.js'
 import fs from 'node:fs/promises'
 import prompts from 'prompts'
@@ -11,12 +9,19 @@ import ora from 'ora'
 import colors from 'kleur'
 import os from 'node:os'
 import https, { Agent } from 'node:https'
+import extendFetchCookie from 'fetch-cookie'
+import { FfmpegProgress } from '@dropb/ffmpeg-progress'
+
+console.clear()
 
 https.globalAgent = new Agent({ keepAlive: true })
 
+const env = process.env
 const exitOnCancel = (state) => {
     if (state.aborted) process.nextTick(() => process.exit(0))
 }
+
+const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36'
 
 const {
     COURSE_SLUG,
@@ -70,17 +75,21 @@ const {
 
 console.clear()
 
+const headers = {
+    'User-Agent': USER_AGENT,
+    'Origin': 'https://frontendmasters.com',
+    'Referer': 'https://frontendmasters.com/'
+}
+
+const cookies = new extendFetchCookie.toughCookie.CookieJar()
+
+cookies.setCookieSync(`wordpress_logged_in_323a64690667409e18476e5932ed231e=${TOKEN}; Path=/; Domain=frontendmasters.com; HttpOnly; Secure`, FEM_ENDPOINT)
 
 const fetch = extendedFetch({
-    headers: {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36',
-        'Cookie': `wordpress_logged_in_323a64690667409e18476e5932ed231e=${TOKEN}`,
-        'Origin': 'https://frontendmasters.com',
-        'Referer': 'https://frontendmasters.com/',
-    },
+    headers,
     retries: 5,
     retryDelay: 1000
-})
+}, cookies)
 
 const spinner = ora(`Searching for ${COURSE_SLUG}...`).start()
 const course = await fetch.json(`${FEM_API_ENDPOINT}/kabuki/courses/${COURSE_SLUG}`)
@@ -121,13 +130,11 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
         const
             fileName = `${episode.index + 1}. ${episode.title}.${EXTENSION}`,
             tempDir = safeJoin(lessonTempDir, QUALITY, episode.title),
-            decryptionKeyPath = safeJoin(tempDir, 'key.bin'),
             captionPath = safeJoin(tempDir, `caption.${CAPTION_EXT}`),
-            playlistPath = safeJoin(tempDir, `playlist.${PLAYLIST_EXT}`),
             filePath = safeJoin(tempDir, fileName),
             finalFilePath = safeJoin(lessonPath, fileName)
 
-        spinner.text = `Downloading ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Chunks: N/A | Remaining: ${x--}/${totalEpisodes}`
+        spinner.text = `Downloading [0%] ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: 0KB | Remaining: ${x--}/${totalEpisodes}`
 
         if (await isPathExists(finalFilePath)) {
             await sleep(100)
@@ -141,6 +148,7 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
 
         // Automatically downgrade quality when preferred quality not found
         const qualities = Object.values(QUALITY_FORMAT)
+
         while (!availableQualities.includes(QUALITY) && availableQualities.includes('#EXTM3U')) {
             QUALITY = qualities[qualities.indexOf(QUALITY) - 1]
 
@@ -156,58 +164,43 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
             spinner.text = `The preferred quality was not found, downgraded to ${formattedQuality}p`
         }
 
+        const m3u8Url = [...m3u8RequestUrl.split('/').slice(0, -1), `${QUALITY}.${PLAYLIST_EXT}`].join('/')
 
-        const
-            m3u8Url = [...m3u8RequestUrl.split('/').slice(0, -1), `${QUALITY}.${PLAYLIST_EXT}`].join('/'),
-            m3u8 = await fetch.text(m3u8Url),
-            key = await fetch.binary(m3u8.match(/URI="(.+)"/)[1])
+        headers['Cookie'] = await cookies.getCookieString(m3u8Url)
 
-        await Promise.all([
-            fs.writeFile(decryptionKeyPath, key),
-            fs.writeFile(playlistPath, m3u8.replace(/URI="(.+)"/g, 'URI="key.bin"'))
-        ])
+        const progress = new FfmpegProgress()
 
-        const totalChunks = m3u8.split('\n').reduce((a, c) => c.startsWith('index_') ? a + 1 : a, 0)
+        progress.on('data', (data) => {
+            spinner.text = `Downloading [${data.percentage.toFixed()}%] ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: ${formatBytes(data.size)} | Remaining: ${x}/${totalEpisodes}`
+        })
 
-        for (let j = 0; j < totalChunks; j++) {
-            const
-                chunkName = `${QUALITY}_${(j + 1).toString().padStart(5, '0')}.ts`,
-                chunkPath = safeJoin(tempDir, chunkName),
-                chunkUrl = [...m3u8Url.split('/').slice(0, -1), chunkName].join('/')
-
-            if (await isPathExists(chunkPath)) {
-                continue
-            }
-
-            const chunk = await fetch.binary(chunkUrl)
-
-            await fs.writeFile(chunkPath, chunk)
-
-            spinner.text = `Downloading ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Chunks: ${j + 1}/${totalChunks} | Remaining: ${x + 1}/${totalEpisodes}`
-        }
-
-        // Merge chunks into one file.
-        await ffmpeg(
+        await ffmpeg([
             '-y',
-            '-allowed_extensions', 'ALL',
-            '-i', playlistPath,
+            '-headers', Object.entries(headers).map(([key, value]) => `${key}: ${value}`).join('\r\n') + '\r\n',
+            '-i',
+            m3u8Url,
             '-map', '0',
             '-c',
             'copy', INCLUDE_CAPTION ? filePath : finalFilePath
-        )
+        ], {
+            pipe: progress,
+            silent: true
+        })
+
+        x--
 
         // Insert subtitles
         if (INCLUDE_CAPTION) {
-            spinner.text = 'Downloading subtitles...'
+            spinner.text = `Downloading captions for ${episode.title}...`
 
             const captions = await fetch.text(`${FEM_CAPTIONS_ENDPOINT}/assets/courses/${course.datePublished}-${course.slug}/${episode.index}-${episode.slug}.${CAPTION_EXT}`)
+
             await fs.writeFile(captionPath, captions)
 
-            spinner.text = 'Inserting subtitles...'
+            spinner.text = `Merging captions to ${episode.title}...`
 
             if (EXTENSION === 'mkv') {
-                await ffmpeg(
-                    '-y',
+                await ffmpeg(['-y',
                     '-i', filePath,
                     '-i', captionPath,
                     '-map', '0',
@@ -215,10 +208,9 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
                     '-c',
                     'copy',
                     finalFilePath
-                )
+                ], { silent: true })
             } else {
-                await ffmpeg(
-                    '-y',
+                await ffmpeg(['-y',
                     '-i', filePath,
                     '-i', captionPath,
                     '-c',
@@ -226,7 +218,7 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
                     '-c:s', 'mov_text',
                     '-metadata:s:s:0', 'language=eng',
                     finalFilePath
-                )
+                ], { silent: true })
             }
         }
     }
