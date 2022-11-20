@@ -41,7 +41,7 @@ const {
 }, {
     type: 'password',
     name: 'TOKEN',
-    message: 'Paste the value of "wordpress_logged_in_xxx" cookie (visit: frontendmasters.com)',
+    message: 'Paste the value of "wordpress_logged_in_xxx" cookie (visit: https://frontendmasters.com)',
     format: v => decodeURIComponent(v) === v ? encodeURIComponent(v) : v,
     initial: env['FEM_DL_COOKIES'],
     onState: exitOnCancel
@@ -56,14 +56,14 @@ const {
     type: 'select',
     message: 'Which video format you prefer?',
     name: 'EXTENSION',
-    initial: 0,
+    initial: 1,
     choices: SUPPORTED_FORMATS.map((value) => ({ title: value, value })),
     onState: exitOnCancel
 }, {
     type: 'confirm',
     initial: true,
     name: 'INCLUDE_CAPTION',
-    message: 'Insert caption/subtitle to the episodes?',
+    message: 'Include episode caption?',
     onState: exitOnCancel
 }, {
     type: 'text',
@@ -84,7 +84,7 @@ const headers = {
 
 const cookies = new extendFetchCookie.toughCookie.CookieJar()
 
-cookies.setCookieSync(`wordpress_logged_in_323a64690667409e18476e5932ed231e=${TOKEN}; Path=/; Domain=frontendmasters.com; HttpOnly; Secure`, FEM_ENDPOINT)
+await cookies.setCookie(`wordpress_logged_in_323a64690667409e18476e5932ed231e=${TOKEN}; Path=/; Domain=frontendmasters.com; HttpOnly; Secure`, FEM_ENDPOINT)
 
 const fetch = extendedFetch({
     headers,
@@ -115,34 +115,31 @@ const [lessons, totalEpisodes] = course.lessonElements.reduce((acc, cur) => {
 }, [{}, 0, ''])
 
 
-let i = 1, x = totalEpisodes, QUALITY = PREFERRED_QUALITY
+let i = 1, x = 0, QUALITY = PREFERRED_QUALITY
 
 const coursePath = safeJoin(DOWNLOAD_DIR, course.title)
 
 for (const [lesson, episodes] of Object.entries(lessons)) {
     const
         lessonName = `${i++}. ${lesson}`,
-        lessonPath = safeJoin(coursePath, lessonName),
-        lessonTempDir = safeJoin(lessonPath, '.tmp')
+        lessonPath = safeJoin(coursePath, lessonName)
 
     await ensureDir(lessonPath)
 
     for (const episode of episodes) {
         const
             fileName = `${episode.index + 1}. ${episode.title}.${EXTENSION}`,
-            tempDir = safeJoin(lessonTempDir, QUALITY, episode.title),
-            captionPath = safeJoin(tempDir, `caption.${CAPTION_EXT}`),
-            filePath = safeJoin(tempDir, fileName),
+            captionPath = safeJoin(lessonPath, `${episode.title}.${CAPTION_EXT}`),
+            tempFilePath = safeJoin(lessonPath, `${episode.title}.${EXTENSION}`),
             finalFilePath = safeJoin(lessonPath, fileName)
 
-        spinner.text = `Downloading [0%] ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: 0KB | Remaining: ${x--}/${totalEpisodes}`
+        spinner.text = `[0%] Downloading ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: 0KB | Remaining: ${++x}/${totalEpisodes}`
 
         if (await isPathExists(finalFilePath)) {
             await sleep(100)
             continue
         }
 
-        await ensureDir(tempDir)
 
         let { url: m3u8RequestUrl } = await fetch.json(episode.url)
         const availableQualities = await fetch.text(m3u8RequestUrl)
@@ -172,7 +169,7 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
         const progress = new FfmpegProgress()
 
         progress.on('data', (data) => {
-            spinner.text = `Downloading [${data.percentage.toFixed()}%] ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: ${formatBytes(data.size)} | Remaining: ${x}/${totalEpisodes}`
+            if (data.percentage && data.size) spinner.text = `[${data.percentage.toFixed()}%] Downloading ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: ${formatBytes(data.size)} | Remaining: ${x}/${totalEpisodes}`
         })
 
         await ffmpeg([
@@ -182,15 +179,14 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
             m3u8Url,
             '-map', '0',
             '-c',
-            'copy', INCLUDE_CAPTION ? filePath : finalFilePath
+            'copy', INCLUDE_CAPTION ? tempFilePath : finalFilePath
         ], {
             pipe: progress,
             silent: true
         })
 
-        x--
 
-        // Insert subtitles
+        // Merge caption
         if (INCLUDE_CAPTION) {
             spinner.text = `Downloading captions for ${episode.title}...`
 
@@ -200,31 +196,38 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
 
             spinner.text = `Merging captions to ${episode.title}...`
 
-            if (EXTENSION === 'mkv') {
-                await ffmpeg(['-y',
-                    '-i', filePath,
+            let args = []
+
+            switch (EXTENSION) {
+                case 'mkv': args = ['-y',
+                    '-i', tempFilePath,
                     '-i', captionPath,
                     '-map', '0',
                     '-map', '1',
                     '-c',
                     'copy',
                     finalFilePath
-                ], { silent: true })
-            } else {
-                await ffmpeg(['-y',
-                    '-i', filePath,
+                ]; break
+
+                case 'mp4': args = ['-y',
+                    '-i', tempFilePath,
                     '-i', captionPath,
                     '-c',
                     'copy',
                     '-c:s', 'mov_text',
                     '-metadata:s:s:0', 'language=eng',
                     finalFilePath
-                ], { silent: true })
+                ]; break;
+                default:
+                    throw new Error(`Unknown extension found: ${EXTENSION}`)
             }
-        }
-    }
 
-    await fs.rm(lessonTempDir, { force: true, recursive: true })
+            await ffmpeg(args, { silent: true })
+            await fs.rm(captionPath)
+        }
+
+        await fs.rm(tempFilePath).catch(() => null)
+    }
 }
 
 
