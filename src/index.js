@@ -130,7 +130,7 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
         const
             fileName = `${episode.index + 1}. ${episode.title}.${EXTENSION}`,
             captionPath = safeJoin(lessonPath, `${episode.title}.${CAPTION_EXT}`),
-            tempFilePath = safeJoin(lessonPath, `${episode.title}.${EXTENSION}`),
+            tempFilePath = safeJoin(lessonPath, `${episode.title}.tmp.${EXTENSION}`),
             finalFilePath = safeJoin(lessonPath, fileName)
 
         spinner.text = `[0%] Downloading ${colors.red(lessonName)}/${colors.cyan().bold(fileName)} | Size: 0KB | Remaining: ${++x}/${totalEpisodes}`
@@ -179,7 +179,7 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
             m3u8Url,
             '-map', '0',
             '-c',
-            'copy', INCLUDE_CAPTION ? tempFilePath : finalFilePath
+            'copy', tempFilePath
         ], {
             pipe: progress,
             silent: true
@@ -199,7 +199,8 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
             let args = []
 
             switch (EXTENSION) {
-                case 'mkv': args = ['-y',
+                case 'mkv': args = [
+                    '-y',
                     '-i', tempFilePath,
                     '-i', captionPath,
                     '-map', '0',
@@ -209,7 +210,8 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
                     finalFilePath
                 ]; break
 
-                case 'mp4': args = ['-y',
+                case 'mp4': args = [
+                    '-y',
                     '-i', tempFilePath,
                     '-i', captionPath,
                     '-c',
@@ -224,6 +226,8 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
 
             await ffmpeg(args, { silent: true })
             await fs.rm(captionPath)
+        } else {
+            await fs.copyFile(tempFilePath, finalFilePath)
         }
 
         await fs.rm(tempFilePath).catch(() => null)
