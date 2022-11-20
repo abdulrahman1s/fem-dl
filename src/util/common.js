@@ -60,7 +60,8 @@ export function extendedFetch(options, cookies) {
 
 
 export function safeJoin(...path) {
-	path[path.length - 1] = os.platform() === 'win32' ? path[path.length - 1].replace(/[\/\\:*?"<>|]/g, '') : path[path.length - 1]
+	const regex = os.platform() === 'win32' ? /[\/\\:*?"<>|]/g : /(\/|\\|:)/g
+	path[path.length - 1] = path[path.length - 1].replace(regex, '')
 	return join(...path)
 }
 
