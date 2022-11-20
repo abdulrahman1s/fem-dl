@@ -11,5 +11,5 @@ export default (args, { silent = false, pipe } = {}) => new Promise((resolve, re
     
     if (pipe) child.stderr.pipe(pipe)
     
-    child.on('close', (code) => code === 0 ? resolve() : reject(err))
+    child.on('exit', (code) => code ? reject(err) : resolve())
 })
