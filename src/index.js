@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { FEM_ENDPOINT, FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS } from './constants.js'
+import { FEM_ENDPOINT, FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS, USER_AGENT } from './constants.js'
 import { sleep, isPathExists, ensureDir, extendedFetch, safeJoin, formatBytes } from './util/common.js'
 import ffmpeg from './util/ffmpeg.js'
 import fs from 'node:fs/promises'
@@ -21,7 +21,6 @@ const exitOnCancel = (state) => {
     if (state.aborted) process.nextTick(() => process.exit(0))
 }
 
-const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36'
 
 const {
     COURSE_SLUG,
@@ -41,7 +40,7 @@ const {
 }, {
     type: 'password',
     name: 'TOKEN',
-    message: 'Paste the value of "wordpress_logged_in_xxx" cookie (visit: https://frontendmasters.com)',
+    message: 'Paste the value of "fem_auth_mod" cookie (visit: https://frontendmasters.com)',
     format: v => decodeURIComponent(v) === v ? encodeURIComponent(v) : v,
     initial: env['FEM_DL_COOKIES'],
     onState: exitOnCancel
@@ -84,7 +83,7 @@ const headers = {
 
 const cookies = new extendFetchCookie.toughCookie.CookieJar()
 
-await cookies.setCookie(`wordpress_logged_in_323a64690667409e18476e5932ed231e=${TOKEN}; Path=/; Domain=frontendmasters.com; HttpOnly; Secure`, FEM_ENDPOINT)
+await cookies.setCookie(`fem_auth_mod=${TOKEN}; Path=/; Domain=frontendmasters.com; HttpOnly; Secure`, FEM_ENDPOINT)
 
 const fetch = extendedFetch({
     headers,
