@@ -114,7 +114,7 @@ const [lessons, totalEpisodes] = course.lessonElements.reduce((acc, cur) => {
 }, [{}, 0, ''])
 
 
-let i = 1, x = 0, QUALITY = PREFERRED_QUALITY
+let i = 1, x = 0, QUALITY = PREFERRED_QUALITY, downgradeAlert = false
 
 const coursePath = safeJoin(DOWNLOAD_DIR, course.title)
 
@@ -146,8 +146,10 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
         // Automatically downgrade quality when preferred quality not found
         const qualities = Object.values(QUALITY_FORMAT)
 
-        while (!availableQualities.includes(QUALITY) && availableQualities.includes('#EXTM3U')) {
-            QUALITY = qualities[qualities.indexOf(QUALITY) - 1]
+        while (!QUALITY.some((it) => availableQualities.includes(it)) && availableQualities.includes('#EXTM3U')) {
+            const index = qualities.findIndex(it => it.every(q => QUALITY.includes(q)))
+            
+            QUALITY = qualities[index - 1]
 
             if (typeof QUALITY === 'undefined') {
                 console.warn(`This shouldn't happen, please fill an issue`)
@@ -156,12 +158,15 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
             }
         }
 
-        if (QUALITY !== PREFERRED_QUALITY) {
-            const [formattedQuality] = Object.entries(QUALITY_FORMAT).find(([_, value]) => value === QUALITY)
-            spinner.text = `The preferred quality was not found, downgraded to ${formattedQuality}p`
+        if (!downgradeAlert && !PREFERRED_QUALITY.some(it => QUALITY.includes(it))) {
+            downgradeAlert = true
+            const [formattedQuality] = Object.entries(QUALITY_FORMAT).find(([_, it]) => it.every(q => QUALITY.includes(q)))
+            spinner.clear()
+            console.log(`\nThe preferred quality was not found, downgraded to ${formattedQuality}p`)
         }
 
-        const m3u8Url = [...m3u8RequestUrl.split('/').slice(0, -1), `${QUALITY}.${PLAYLIST_EXT}`].join('/')
+        const streamQuality = QUALITY.find(it => availableQualities.includes(it))
+        const m3u8Url = [...m3u8RequestUrl.split('/').slice(0, -1), `${streamQuality}.${PLAYLIST_EXT}`].join('/')
 
         headers['Cookie'] = await cookies.getCookieString(m3u8Url)
 
