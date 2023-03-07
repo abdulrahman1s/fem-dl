@@ -1,6 +1,6 @@
 {
   "name": "fem-dl",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Frontend Masters Downloader",
   "main": "src/index.js",
   "scripts": {
