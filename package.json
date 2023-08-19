@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "@dropb/ffmpeg-progress": "^2.0.0",
+    "enquirer": "^2.4.1",
     "fetch-cookie": "^2.1.0",
     "fetch-retry": "^5.0.3",
     "ffmpeg-static": "^5.1.0",

@@ -28,6 +28,7 @@ const {
     DOWNLOAD_DIR,
     EXTENSION,
     INCLUDE_CAPTION,
+    DOWNLOAD_SPECIFIC_SECTION,
     TOKEN
 } = await prompts([{
     type: 'text',
@@ -64,7 +65,15 @@ const {
     name: 'INCLUDE_CAPTION',
     message: 'Include episode caption?',
     onState: exitOnCancel
-}, {
+},
+{
+    type: 'confirm',
+    initial: false,
+    name: 'DOWNLOAD_SPECIFIC_SECTION',
+    message: 'Do you want to download a specific section?',
+    onState: exitOnCancel
+},
+{
     type: 'text',
     message: 'Download directory path',
     name: 'DOWNLOAD_DIR',
@@ -107,7 +116,7 @@ for (const data of Object.values(course.lessonData)) course.lessonElements[cours
     index: data.index
 }
 
-const [lessons, totalEpisodes] = course.lessonElements.reduce((acc, cur) => {
+const [lessons, episodeCount] = course.lessonElements.reduce((acc, cur) => {
     if (typeof cur === 'string') (acc[0][cur] = [], acc[2] = cur)
     else (acc[0][acc[2]].push(cur), acc[1]++)
     return acc
@@ -118,7 +127,28 @@ let i = 1, x = 0, QUALITY = PREFERRED_QUALITY, downgradeAlert = false
 
 const coursePath = safeJoin(DOWNLOAD_DIR, course.title)
 
-for (const [lesson, episodes] of Object.entries(lessons)) {
+const lessonNames = Object.keys(lessons);
+
+let selectedLessons = lessons;
+let totalEpisodes = episodeCount;
+
+if (DOWNLOAD_SPECIFIC_SECTION) {
+    const { selectedLesson } = await prompts([{
+        type: 'select',
+        name: 'selectedLesson',
+        message: 'Select the lesson you want to download?',
+        choices: lessonNames.map((value) => ({ title: value, value })),
+        onState: exitOnCancel
+    }]);
+    i = lessonNames.findIndex(name => name === selectedLesson) + 1;
+    selectedLessons = {
+        [selectedLesson]: lessons[selectedLesson],
+    }
+    totalEpisodes = lessons[selectedLesson].length;
+}
+
+
+for (const [lesson, episodes] of Object.entries(selectedLessons)) {
     const
         lessonName = `${i++}. ${lesson}`,
         lessonPath = safeJoin(coursePath, lessonName)
@@ -148,7 +178,7 @@ for (const [lesson, episodes] of Object.entries(lessons)) {
 
         while (!QUALITY.some((it) => availableQualities.includes(it)) && availableQualities.includes('#EXTM3U')) {
             const index = qualities.findIndex(it => it.every(q => QUALITY.includes(q)))
-            
+
             QUALITY = qualities[index - 1]
 
             if (typeof QUALITY === 'undefined') {
