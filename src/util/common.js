@@ -67,3 +67,13 @@ export function safeJoin(...path) {
 
 
 export { setTimeout as sleep } from 'node:timers/promises'
+
+/**
+ * Create element to index mapping
+ * @param {string[]} arr Array of strings
+ * @returns {object}
+ */
+export const getIndexMapping = (arr = []) => arr.reduce((acc, curr, index) => {
+	acc[curr] = index;
+	return acc;
+}, {});

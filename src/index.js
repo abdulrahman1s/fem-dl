@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { FEM_ENDPOINT, FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS, USER_AGENT } from './constants.js'
-import { sleep, isPathExists, ensureDir, extendedFetch, safeJoin, formatBytes } from './util/common.js'
+import { sleep, isPathExists, ensureDir, extendedFetch, safeJoin, formatBytes, getIndexMapping } from './util/common.js'
 import ffmpeg from './util/ffmpeg.js'
 import fs from 'node:fs/promises'
 import prompts from 'prompts'
@@ -10,7 +10,8 @@ import colors from 'kleur'
 import os from 'node:os'
 import https, { Agent } from 'node:https'
 import extendFetchCookie from 'fetch-cookie'
-import { FfmpegProgress } from '@dropb/ffmpeg-progress'
+import { FfmpegProgress } from '@dropb/ffmpeg-progress';
+import { selectLessonsPrompt } from './util/prompt.js';
 
 console.clear()
 
@@ -28,7 +29,7 @@ const {
     DOWNLOAD_DIR,
     EXTENSION,
     INCLUDE_CAPTION,
-    DOWNLOAD_SPECIFIC_SECTION,
+    DOWNLOAD_SPECIFIC_LESSON,
     TOKEN
 } = await prompts([{
     type: 'text',
@@ -69,8 +70,8 @@ const {
 {
     type: 'confirm',
     initial: false,
-    name: 'DOWNLOAD_SPECIFIC_SECTION',
-    message: 'Do you want to download a specific section?',
+    name: 'DOWNLOAD_SPECIFIC_LESSON',
+    message: 'Do you want to download specific lesson(s)?',
     onState: exitOnCancel
 },
 {
@@ -123,34 +124,31 @@ const [lessons, episodeCount] = course.lessonElements.reduce((acc, cur) => {
 }, [{}, 0, ''])
 
 
-let i = 1, x = 0, QUALITY = PREFERRED_QUALITY, downgradeAlert = false
+let x = 0, QUALITY = PREFERRED_QUALITY, downgradeAlert = false
 
 const coursePath = safeJoin(DOWNLOAD_DIR, course.title)
 
-const lessonNames = Object.keys(lessons);
+const lessonIndexMap = getIndexMapping(Object.keys(lessons));
 
 let selectedLessons = lessons;
 let totalEpisodes = episodeCount;
 
-if (DOWNLOAD_SPECIFIC_SECTION) {
-    const { selectedLesson } = await prompts([{
-        type: 'select',
-        name: 'selectedLesson',
-        message: 'Select the lesson you want to download?',
-        choices: lessonNames.map((value) => ({ title: value, value })),
-        onState: exitOnCancel
-    }]);
-    i = lessonNames.findIndex(name => name === selectedLesson) + 1;
-    selectedLessons = {
-        [selectedLesson]: lessons[selectedLesson],
+if (DOWNLOAD_SPECIFIC_LESSON) {
+    spinner.text = 'Waiting for selection..';
+    const selectedLessonNames = await selectLessonsPrompt(Object.keys(lessons));
+    selectedLessons = {};
+    totalEpisodes = 0;
+    for (let selectedLessonName of selectedLessonNames) {
+        selectedLessons[selectedLessonName] = lessons[selectedLessonName];
+        totalEpisodes += lessons[selectedLessonName].length; 
     }
-    totalEpisodes = lessons[selectedLesson].length;
 }
 
 
 for (const [lesson, episodes] of Object.entries(selectedLessons)) {
+    const i = lessonIndexMap[lesson] + 1;
     const
-        lessonName = `${i++}. ${lesson}`,
+        lessonName = `${i}. ${lesson}`,
         lessonPath = safeJoin(coursePath, lessonName)
 
     await ensureDir(lessonPath)
