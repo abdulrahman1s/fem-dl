@@ -1,27 +1,18 @@
 #!/usr/bin/env node
-
-import { FEM_ENDPOINT, FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, CAPTION_EXT, PLAYLIST_EXT, QUALITY_FORMAT, FEM_COURSE_REG, SUPPORTED_FORMATS, USER_AGENT } from './constants.js'
-import { sleep, isPathExists, ensureDir, extendedFetch, safeJoin, formatBytes, getIndexMapping } from './util/common.js'
-import ffmpeg from './util/ffmpeg.js'
-import fs from 'node:fs/promises'
-import prompts from 'prompts'
-import ora from 'ora'
-import colors from 'kleur'
-import os from 'node:os'
-import https, { Agent } from 'node:https'
+import { FfmpegProgress } from '@dropb/ffmpeg-progress'
 import extendFetchCookie from 'fetch-cookie'
-import { FfmpegProgress } from '@dropb/ffmpeg-progress';
-import { selectLessonsPrompt } from './util/prompt.js';
+import colors from 'kleur'
+import fs from 'node:fs/promises'
+import https, { Agent } from 'node:https'
+import ora from 'ora'
+import { CAPTION_EXT, FEM_API_ENDPOINT, FEM_CAPTIONS_ENDPOINT, FEM_ENDPOINT, PLAYLIST_EXT, QUALITY_FORMAT, USER_AGENT } from './constants.js'
+import { ensureDir, extendedFetch, formatBytes, getIndexMapping, isPathExists, safeJoin, sleep } from './util/common.js'
+import ffmpeg from './util/ffmpeg.js'
+import { defaultPrompts, selectLessonsPrompt } from './util/prompt.js'
 
 console.clear()
 
 https.globalAgent = new Agent({ keepAlive: true })
-
-const env = process.env
-const exitOnCancel = (state) => {
-    if (state.aborted) process.nextTick(() => process.exit(0))
-}
-
 
 const {
     COURSE_SLUG,
@@ -31,57 +22,7 @@ const {
     INCLUDE_CAPTION,
     DOWNLOAD_SPECIFIC_LESSON,
     TOKEN
-} = await prompts([{
-    type: 'text',
-    name: 'COURSE_SLUG',
-    message: 'The url of the course you want to download',
-    initial: env['FEM_DL_COURSE_URL'] || 'https://frontendmasters.com/courses/...',
-    validate: v => !v.endsWith('...') && FEM_COURSE_REG.test(v),
-    format: v => v.match(FEM_COURSE_REG)[2],
-    onState: exitOnCancel
-}, {
-    type: 'password',
-    name: 'TOKEN',
-    message: 'Paste the value of "fem_auth_mod" cookie (visit: https://frontendmasters.com)',
-    format: v => decodeURIComponent(v) === v ? encodeURIComponent(v) : v,
-    initial: env['FEM_DL_COOKIES'],
-    onState: exitOnCancel
-}, {
-    type: 'select',
-    name: 'PREFERRED_QUALITY',
-    message: 'Which stream quality do you prefer?',
-    choices: [2160, 1440, 1080, 720, 360].map((value) => ({ title: value + 'p', value })),
-    format: v => QUALITY_FORMAT[v],
-    onState: exitOnCancel
-}, {
-    type: 'select',
-    message: 'Which video format you prefer?',
-    name: 'EXTENSION',
-    initial: 1,
-    choices: SUPPORTED_FORMATS.map((value) => ({ title: value, value })),
-    onState: exitOnCancel
-}, {
-    type: 'confirm',
-    initial: true,
-    name: 'INCLUDE_CAPTION',
-    message: 'Include episode caption?',
-    onState: exitOnCancel
-},
-{
-    type: 'confirm',
-    initial: false,
-    name: 'DOWNLOAD_SPECIFIC_LESSON',
-    message: 'Do you want to download specific lesson(s)?',
-    onState: exitOnCancel
-},
-{
-    type: 'text',
-    message: 'Download directory path',
-    name: 'DOWNLOAD_DIR',
-    initial: env['FEM_DL_DOWNLOAD_PATH'] || safeJoin(os.homedir(), 'Downloads'),
-    validate: v => isPathExists(v),
-    onState: exitOnCancel
-}])
+} = await defaultPrompts();
 
 console.clear()
 
@@ -136,6 +77,10 @@ let totalEpisodes = episodeCount;
 if (DOWNLOAD_SPECIFIC_LESSON) {
     spinner.text = 'Waiting for selection..';
     const selectedLessonNames = await selectLessonsPrompt(Object.keys(lessons));
+    if (!selectedLessonNames.length) {
+        spinner.fail("You haven't selected any lesson to dowload");
+        process.exit(0);
+    }
     selectedLessons = {};
     totalEpisodes = 0;
     for (let selectedLessonName of selectedLessonNames) {
